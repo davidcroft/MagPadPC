@@ -74,21 +74,38 @@ public class FFTThreadCls implements Runnable {
 		fftX.forward(fft_ptx);
 		fftY.forward(fft_pty);
 		fftZ.forward(fft_ptz);
-	    
-		m_parent.background(255);
-	    
-		// DISPLAY
-		//float normRate = ((float)(height-80))/maxVal;
-		float normRate = ((float)(m_parent.height/3-50))/NORMMAXVAL;
-		//System.out.println("FFT size: "+fft.specSize());
-		for(int i = 0; i < fftX.specSize(); i++) {
-			int barWidth = m_parent.width / fftX.specSize();
-			// draw the line for frequency band i, scaling it up a bit so we can see it
-			//line(i, height, i, height - fft.getBand(i)*150 );
-			m_parent.rect(i*barWidth, (float)(m_parent.height/3)-fftX.getBand(i)*normRate, barWidth, fftX.getBand(i)*normRate);
-			m_parent.rect(i*barWidth, (float)(m_parent.height*2/3)-fftY.getBand(i)*normRate, barWidth, fftY.getBand(i)*normRate);
-			m_parent.rect(i*barWidth, (float)(m_parent.height)-fftZ.getBand(i)*normRate, barWidth, fftZ.getBand(i)*normRate);
+			    
+		/////////////////////////////////////
+		// pass to ProcessingSketch for GUI
+		// get top 32 bins
+		float[][] fftVal = new float[3][32];
+		for (int i = 0; i < 32; i++) {
+			fftVal[0][i] = fftX.getBand(i);
+			fftVal[1][i] = fftY.getBand(i);
+			fftVal[2][i] = fftZ.getBand(i);
+			ProcessingSketch.guiData[0][i] = fftVal[0][i];
+			ProcessingSketch.guiData[1][i] = fftVal[1][i];
+			ProcessingSketch.guiData[2][i] = fftVal[2][i];
 		}
+		
+		// find top 2
+		for (int j = 0; j < 3; j++) {
+			int[] maxValIdx = new int[2];
+			maxValIdx[0] = maxValIdx[1] = 3;
+			for (int i = 3; i < fftVal[j].length; i++) {
+				if (fftVal[j][i] > fftVal[j][maxValIdx[0]]) {
+					maxValIdx[1] = maxValIdx[0];
+					maxValIdx[0] = i;
+			} else if (fftVal[j][i] > fftVal[j][maxValIdx[1]]) {
+				maxValIdx[1] = i;
+			}
+		}
+		// pass to global array for display
+		ProcessingSketch.maxValIdx[j][0] = maxValIdx[0];
+		ProcessingSketch.maxValIdx[j][1] = maxValIdx[1];
+		}
+		//////////////////////////////////////////////////////////
+
 				
 		// append data to trainingSet
 		if (!m_isTrained) {

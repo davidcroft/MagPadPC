@@ -42,6 +42,15 @@ public class ProcessingSketch extends PApplet {
 	private int isTrainingIndex = -2;	// default value: -2; train classifier: -1; train blocks: 0-3;
 	private ArrayList<Integer> unTrainedList = new ArrayList<Integer>();
 	
+	// GUI
+	public static float[][] guiData = new float[3][32];
+	public static int[][] maxValIdx = new int[3][2];
+	private PFont font;
+	private int locClass = 0;
+	private double predictLocRow = 0;
+	private double predictLocCol = 0;
+	private String logStr = "";
+	
 	public void setup() {
 		// OSC
 		// start oscP5, telling it to listen for incoming messages at port 5001 */
@@ -137,9 +146,166 @@ public class ProcessingSketch extends PApplet {
 		// init hashtable
 		trainTable = new TrainingHashTable();
 	    size(displayWidth,displayHeight);
+	    
+	    // GUI
+	    frameRate(4);
+	    maxValIdx[0][0] = maxValIdx[0][1] = 0;
+	    maxValIdx[1][0] = maxValIdx[1][1] = 0;
+	    maxValIdx[2][0] = maxValIdx[2][1] = 0;
+	    font = createFont(Paths.get("files", "OpenSans-Regular.ttf").toAbsolutePath().toString(),16);
 	}
 
 	public void draw() {
+		background(0);
+		
+		// FFT bands 
+		float normRate = ((float)((height-200)/3))/20000;
+		int offsetCol = width*3/5;
+		int barWidth = offsetCol / 32;
+		for (int j = 0; j < 3; j++) {
+			float offsetRow = 100+ (((height-200)/3)*(j+1));
+			// draw baseline
+			stroke(0xFF,0xFF,0xF0);
+		    strokeWeight(1);
+		    line(20, offsetRow+1, 40+32*barWidth, offsetRow+1);
+		    // draw rect
+			for(int i = 0; i < 32; i++) {
+				if (i == maxValIdx[j][0] || i == maxValIdx[j][1]) {
+					fill(0xFE,0x6F,0x5E, 255);
+				} else {
+					int ratio = (int)map(guiData[j][i], 0, guiData[j][maxValIdx[j][0]], 0, 255);
+					fill(0xFF,0xFF,0xF0, ratio);
+				}
+				noStroke();
+				rect(30+i*barWidth+1, offsetRow-guiData[j][i]*normRate, barWidth-2, guiData[j][i]*normRate);
+			}
+	    }
+		
+		// jig(frame) display
+		offsetCol = offsetCol + (width*2/5-170)/2;
+		int offsetRow = 100;
+		int radius = 10;
+		fill(0x16, 0x40, 0x6B, 200);
+		rect(offsetCol, offsetRow, 170, 220);
+		fill(0xFE,0x6F,0x5E, 255);
+		ellipse(offsetCol, offsetRow, radius, radius);
+		ellipse(offsetCol+170, offsetRow, radius, radius);
+		ellipse(offsetCol+170, offsetRow+220, radius, radius);
+		ellipse(offsetCol, offsetRow+220, radius, radius);
+		ellipse(offsetCol, offsetRow+110, radius, radius);
+		ellipse(offsetCol+170, offsetRow+110, radius, radius);
+		
+		// texts
+		fill(0xFE,0x6F,0x5E);
+		textFont(font, 32);
+		offsetRow = 400;
+		if (isTrainedCls && isTrainedReg) {
+			text("TEST", offsetCol+35, offsetRow);
+		} else {
+			if (!isTrainedReg) {
+				offsetCol -= 50;
+				text("TRAIN REG "+unTrainedList.get(0), offsetCol+35, offsetRow);
+			} else if (!isTrainedCls){
+				offsetCol -= 30;
+				text("TRAIN CLS", offsetCol+35, offsetRow);
+			}
+		}
+		
+		fill(255);
+		textFont(font, 16);
+		offsetCol = width*3/5+100;
+		offsetRow += 70;
+		if (unTrainedList.isEmpty()) {
+			text("Regression Untrained Blocks: None", offsetCol, offsetRow);
+		} else {
+			String temp = "";
+			for (int i = 0; i < unTrainedList.size(); i++) {
+				temp +=unTrainedList.get(i)+", ";
+			}
+			text("Regression Untrained Blocks: "+temp, offsetCol, offsetRow);
+		}
+		offsetRow += 30;
+		if (isTrainedCls) {
+			text("Classification: Trained", offsetCol, offsetRow);
+		} else {
+			text("Classification: Untrained", offsetCol, offsetRow);
+		}
+		offsetRow += 30;
+		text("fftIndex: "+fftIndex, offsetCol, offsetRow);
+		offsetRow += 30;
+		text("fftCnt: "+fftCnt, offsetCol, offsetRow);
+		
+		offsetRow += 50;
+		if (isTrainedCls) {
+			text("Classification: "+locClass, offsetCol, offsetRow);
+		} else {
+			text("Classification: -", offsetCol, offsetRow);
+		}
+		offsetRow += 30;
+		if (isTrainedCls && isTrainedReg) {
+			text("predictLocRow: "+predictLocRow, offsetCol, offsetRow);
+			offsetRow += 30;
+			text("predictLocCol: "+predictLocCol, offsetCol, offsetRow);
+		} else {
+			text("predictLocRow: -", offsetCol, offsetRow);
+			offsetRow += 30;
+			text("predictLocCol: -", offsetCol, offsetRow);
+		}
+		
+		offsetRow += 50;
+		textFont(font, 12);
+		text("LOG: "+logStr, offsetCol, offsetRow);
+		
+		// text
+		textFont(font, 16);
+		offsetCol = width*3/5 - 120;
+		offsetRow = 100;
+	    text("Max bins index: "+maxValIdx[0][0]+", "+maxValIdx[0][1], offsetCol, offsetRow);
+	    offsetRow += (height-200)/3+25;
+	    text("Max bins index: "+maxValIdx[1][0]+", "+maxValIdx[1][1], offsetCol, offsetRow);
+	    offsetRow += (height-200)/3+5;
+	    text("Max bins index: "+maxValIdx[2][0]+", "+maxValIdx[2][1], offsetCol, offsetRow);
+	}
+	
+	public void keyPressed() {
+		if (key == 'a') {
+			// remove last collection of data
+			logStr = "remove last capture pts";
+			System.out.println("Size before removal: "+GlobalConstants.trainingColSet.size());
+			int cnt = GlobalConstants.FFTFOREACHPOS+1;
+			if (GlobalConstants.trainingColSet.size() > 0 && GlobalConstants.trainingColSet.size()%cnt == 0 && 
+				GlobalConstants.trainingRowSet.size() > 0 && GlobalConstants.trainingRowSet.size()%cnt == 0) {
+				while(cnt > 0) {
+					GlobalConstants.trainingRowSet.remove(GlobalConstants.trainingRowSet.size()-1);
+					GlobalConstants.trainingColSet.remove(GlobalConstants.trainingColSet.size()-1);
+					cnt -= 1;
+				}
+				fftIndex -= 1;
+			}
+			System.out.println("Size after removal: "+GlobalConstants.trainingColSet.size());
+		} else if (key == 'd') {
+			logStr = "remove last capture pts";
+			System.out.println("Size before removal: " + GlobalConstants.trainingClsSet.size());
+			int cnt = GlobalConstants.FFTCLSFOREACHPOS+1;
+			if (GlobalConstants.trainingClsSet.size() > 0 && GlobalConstants.trainingClsSet.size()%cnt == 0) {
+				while(cnt > 0) {
+					GlobalConstants.trainingClsSet.remove(GlobalConstants.trainingClsSet.size()-1);
+					cnt -= 1;
+				}
+				fftIndex -= 1;
+			}
+			System.out.println("Size after removal: " + GlobalConstants.trainingClsSet.size());
+		} else if (key == 's') {
+			logStr = "save CSV files";
+			if (isTrainingIndex >= 0 && isTrainingIndex < GlobalConstants.TRAININGCLSNUM) {
+				generateCsvFile(isTrainingIndex);
+				System.out.println("generate CSV file for regression block " + isTrainingIndex);
+			} else if (isTrainingIndex == -1) {
+				generateClsCsvFile();
+				System.out.println("generate CSV file for classification");
+			}
+			System.out.println("save csv file");
+		}
 	}
 	
 	public void mousePressed() {
@@ -202,15 +368,15 @@ public class ProcessingSketch extends PApplet {
 		    	float[] testDataRow = GlobalConstants.testingSet.get(0);
 		    	GlobalConstants.testingSet.remove(0);
 		    	// get classification first
-		    	int locClass = SVMClassfier.classifyGesture(testDataRow);
+		    	locClass = SVMClassfier.classifyGesture(testDataRow);
 		    	System.out.println("predict block class: " + locClass);
 		    	// predict location using corresponding regression
-		    	double predictLocRow = SVMRegressionRow[locClass].classifyGesture(testDataRow);
-		    	double predictLocCol = SVMRegressionCol[locClass].classifyGesture(testDataRow);
+		    	double predictLocRowTemp = SVMRegressionRow[locClass].classifyGesture(testDataRow);
+		    	double predictLocColTemp = SVMRegressionCol[locClass].classifyGesture(testDataRow);
 		    	
 		    	// normalize location to A4 size
-		    	predictLocRow = predictLocRow * GlobalConstants.MAXHEIGHT;
-		    	predictLocCol = predictLocCol * GlobalConstants.MAXWIDTH;
+		    	predictLocRow = predictLocRowTemp * GlobalConstants.MAXHEIGHT;
+		    	predictLocCol = predictLocColTemp * GlobalConstants.MAXWIDTH;
 		    	System.out.println("predict location: " + predictLocRow + " " + predictLocCol);
 		    	
 		    	// send a OSC message

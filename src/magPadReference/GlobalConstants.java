@@ -13,8 +13,8 @@ public class GlobalConstants {
 	// FFT
 	public static final int BUFFERSIZE = 64;
 	public static final int SAMPLERATE = 100;
-	public static final int FFTFOREACHPOS = 20;
-	//public static final int FFTCLSFOREACHPOS = 400;
+	public static final int FFTFOREACHPOS = 19;
+	//public static final int FFTCLSFOREACHPOS = 399;
 	
 	// ML Training
 	public static final int TRAINTOTALROW = 2;
