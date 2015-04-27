@@ -1,7 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.7">
+		<attributes>
+			<attribute name="org.eclipse.jdt.launching.CLASSPATH_ATTR_LIBRARY_PATH_ENTRY" value="/Users/dingxu/CMU/Programming/Processing/Processing.app/Contents/Java/modes/java/libraries/serial/library/macosx"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="lib" path="core.jar"/>
 	<classpathentry kind="lib" path="oscP5.jar"/>
 	<classpathentry kind="lib" path="jl1.0.jar"/>
@@ -14,5 +18,7 @@
 	<classpathentry kind="lib" path="slf4j-api-1.7.5.jar"/>
 	<classpathentry kind="lib" path="slf4j-nop-1.7.6.jar"/>
 	<classpathentry kind="lib" path="weka.jar"/>
+	<classpathentry kind="lib" path="jssc.jar"/>
+	<classpathentry kind="lib" path="serial.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

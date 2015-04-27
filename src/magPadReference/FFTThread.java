@@ -68,33 +68,28 @@ public class FFTThread implements Runnable {
 		fftZ.forward(fft_ptz);
 		
 		/////////////////////////////////////
-		// pass to ProcessingSketch for GUI
-		// get top 32 bins
-		float[][] fftVal = new float[3][32];
-		for (int i = 0; i < 32; i++) {
-			fftVal[0][i] = fftX.getBand(i);
-			fftVal[1][i] = fftY.getBand(i);
-			fftVal[2][i] = fftZ.getBand(i);
-			ProcessingSketch.guiData[0][i] = fftVal[0][i];
-			ProcessingSketch.guiData[1][i] = fftVal[1][i];
-			ProcessingSketch.guiData[2][i] = fftVal[2][i];
-		}
-		
-		// find top 2
-	    for (int j = 0; j < 3; j++) {
-		    int[] maxValIdx = new int[2];
-	    	maxValIdx[0] = maxValIdx[1] = 3;
-	    	for (int i = 3; i < fftVal[j].length; i++) {
-	    		if (fftVal[j][i] > fftVal[j][maxValIdx[0]]) {
-	    			maxValIdx[1] = maxValIdx[0];
-	    			maxValIdx[0] = i;
-	    		} else if (fftVal[j][i] > fftVal[j][maxValIdx[1]]) {
-	    			maxValIdx[1] = i;
-	    		}
+		// normalization
+	    float[] fft = new float[fftX.specSize()];
+	    for (int i = 0; i < fftX.specSize(); i++) {
+	      fft[i] = fftX.getBand(i) + fftY.getBand(i) + fftZ.getBand(i);
+	    }
+	    
+	    // find top 2
+	    int[] maxValIdx = new int[2];
+	    maxValIdx[0] = maxValIdx[1] = 3;
+	    for (int i = 3; i < fft.length; i++) {
+	    	if (fft[i] > fft[maxValIdx[0]]) {
+	    		maxValIdx[1] = maxValIdx[0];
+	    		maxValIdx[0] = i;
+	    	} else if (fft[i] > fft[maxValIdx[1]]) {
+	    		maxValIdx[1] = i;
 	    	}
-	    	// pass to global array for display
-		    ProcessingSketch.maxValIdx[j][0] = maxValIdx[0];
-		    ProcessingSketch.maxValIdx[j][1] = maxValIdx[1];
+	    }
+	    ProcessingSketch.maxValIdx[0] = maxValIdx[0];
+	    ProcessingSketch.maxValIdx[1] = maxValIdx[1];
+	    
+	    for(int i = 0; i < 32; i++) {
+	    	ProcessingSketch.guiData[i] = fft[i];
 	    }
 		//////////////////////////////////////////////////////////
 	    
